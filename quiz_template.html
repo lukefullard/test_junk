@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Interactive Quiz</title>
+  <style>
+    :root {
+      --bg: #f8fafc;
+      --card-bg: #ffffff;
+      --text: #0f172a;
+      --text-muted: #64748b;
+      --border: #e2e8f0;
+      --primary: #2563eb;
+      --correct: #16a34a;
+      --correct-bg: #f0fdf4;
+      --incorrect: #dc2626;
+      --incorrect-bg: #fef2f2;
+      --radius: 12px;
+      --shadow: 0 4px 6px -1px rgba(0,0,0,0.05), 0 2px 4px -2px rgba(0,0,0,0.05);
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      line-height: 1.5;
+      padding: 2rem 1rem;
+    }
+
+    .container {
+      max-width: 768px;
+      margin: 0 auto;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 2rem;
+    }
+
+    h1 { font-size: 1.875rem; font-weight: 700; color: var(--text); margin-bottom: 0.5rem; }
+    .subtitle { color: var(--text-muted); font-size: 0.95rem; }
+
+    .score-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1rem 1.5rem;
+      margin-bottom: 1.5rem;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 1rem;
+      z-index: 10;
+    }
+
+    .score-text { font-weight: 600; font-size: 1.1rem; }
+    .btn-reset {
+      background: transparent;
+      border: 1px solid var(--border);
+      padding: 0.4rem 0.8rem;
+      border-radius: 6px;
+      cursor: pointer;
+      font-weight: 500;
+      color: var(--text-muted);
+      transition: all 0.2s;
+    }
+    .btn-reset:hover { background: var(--border); color: var(--text); }
+
+    .question-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 1.5rem;
+      margin-bottom: 1.5rem;
+      box-shadow: var(--shadow);
+    }
+
+    .question-number {
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      color: var(--primary);
+      font-weight: 700;
+      margin-bottom: 0.5rem;
+    }
+
+    .question-title {
+      font-size: 1.15rem;
+      font-weight: 600;
+      margin-bottom: 1rem;
+    }
+
+    .options-grid {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+    }
+
+    .option-btn {
+      text-align: left;
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      padding: 0.85rem 1rem;
+      border-radius: 8px;
+      font-size: 0.95rem;
+      cursor: pointer;
+      color: var(--text);
+      transition: all 0.15s ease;
+      display: flex;
+      align-items: center;
+      gap: 0.75rem;
+    }
+
+    .option-btn:hover:not(:disabled) {
+      border-color: var(--primary);
+      background: #eff6ff;
+    }
+
+    .option-btn:disabled { cursor: default; }
+
+    .option-btn.correct {
+      border-color: var(--correct) !important;
+      background-color: var(--correct-bg) !important;
+      color: var(--correct) !important;
+      font-weight: 600;
+    }
+
+    .option-btn.incorrect {
+      border-color: var(--incorrect) !important;
+      background-color: var(--incorrect-bg) !important;
+      color: var(--incorrect) !important;
+    }
+
+    .explanation-box {
+      margin-top: 1rem;
+      padding: 1rem;
+      border-radius: 8px;
+      background: #f8fafc;
+      border: 1px solid var(--border);
+      font-size: 0.9rem;
+      display: none;
+    }
+
+    .explanation-box.visible { display: block; }
+    .explanation-box.is-correct-box {
+      border-left: 4px solid var(--correct);
+      background: var(--correct-bg);
+    }
+    .explanation-box.is-incorrect-box {
+      border-left: 4px solid var(--incorrect);
+      background: var(--incorrect-bg);
+    }
+
+    .status-badge {
+      font-weight: 700;
+      font-size: 0.95rem;
+      margin-bottom: 0.5rem;
+    }
+    .status-badge.correct { color: var(--correct); }
+    .status-badge.incorrect { color: var(--incorrect); }
+
+    .exp-entry { margin-bottom: 0.5rem; }
+    .exp-entry:last-child { margin-bottom: 0; }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>Interactive Source Quiz</h1>
+      <p class="subtitle">Test your knowledge with detailed per-option feedback</p>
+    </header>
+
+    <div class="score-card">
+      <div class="score-text">Score: <span id="score">0</span> / <span id="total">0</span></div>
+      <button class="btn-reset" onclick="resetQuiz()">Reset Quiz</button>
+    </div>
+
+    <div id="quiz-container"></div>
+  </div>
+
+  <script>
+    // PASTE YOUR NOTEBOOKLM JSON ARRAY HERE
+    const quizData = [
+      {
+        "id": 1,
+        "question": "What is the primary benefit of running a topic modeling pipeline locally in the browser?",
+        "options": [
+          {
+            "text": "It forces remote servers to process heavy data faster.",
+            "explanation": "Incorrect. Running locally moves the processing load off the server entirely onto the client's machine."
+          },
+          {
+            "text": "It keeps user data private and reduces network latency.",
+            "explanation": "Correct! Because data never leaves the browser, privacy is preserved and network response delays are eliminated."
+          },
+          {
+            "text": "It requires continuous high-bandwidth internet connectivity.",
+            "explanation": "Incorrect. Client-side execution can function completely offline once assets are cached."
+          },
+          {
+            "text": "It automatically uploads analysis results to open data repositories.",
+            "explanation": "Incorrect. Local execution prevents unauthorized uploads unless explicitly programmed to export data."
+          }
+        ],
+        "correctIndex": 1
+      }
+    ];
+
+    let userAnswers = {};
+
+    function renderQuiz() {
+      const container = document.getElementById("quiz-container");
+      document.getElementById("total").textContent = quizData.length;
+      container.innerHTML = "";
+
+      quizData.forEach((q, qIndex) => {
+        const card = document.createElement("div");
+        card.className = "question-card";
+
+        const questionNum = document.createElement("div");
+        questionNum.className = "question-number";
+        questionNum.textContent = `Question ${qIndex + 1}`;
+
+        const title = document.createElement("div");
+        title.className = "question-title";
+        title.textContent = q.question;
+
+        const optionsGrid = document.createElement("div");
+        optionsGrid.className = "options-grid";
+
+        q.options.forEach((opt, oIndex) => {
+          const btn = document.createElement("button");
+          btn.className = "option-btn";
+          btn.innerHTML = `<strong>${String.fromCharCode(65 + oIndex)}.</strong> ${opt.text}`;
+          btn.onclick = () => selectOption(qIndex, oIndex);
+          btn.id = `q${qIndex}-opt${oIndex}`;
+          optionsGrid.appendChild(btn);
+        });
+
+        const expBox = document.createElement("div");
+        expBox.className = "explanation-box";
+        expBox.id = `exp-${qIndex}`;
+
+        card.appendChild(questionNum);
+        card.appendChild(title);
+        card.appendChild(optionsGrid);
+        card.appendChild(expBox);
+        container.appendChild(card);
+      });
+
+      updateScore();
+    }
+
+    function selectOption(qIndex, selectedIndex) {
+      if (userAnswers[qIndex] !== undefined) return; // Prevent re-answering
+
+      userAnswers[qIndex] = selectedIndex;
+      const q = quizData[qIndex];
+      const isCorrect = selectedIndex === q.correctIndex;
+
+      // Update button styling
+      q.options.forEach((_, oIndex) => {
+        const btn = document.getElementById(`q${qIndex}-opt${oIndex}`);
+        btn.disabled = true;
+
+        if (oIndex === q.correctIndex) {
+          btn.classList.add("correct");
+        } else if (oIndex === selectedIndex && !isCorrect) {
+          btn.classList.add("incorrect");
+        }
+      });
+
+      // Build targeted explanation content
+      const expBox = document.getElementById(`exp-${qIndex}`);
+      let expContent = "";
+
+      if (isCorrect) {
+        expBox.className = "explanation-box visible is-correct-box";
+        expContent = `
+          <div class="status-badge correct">✓ Correct!</div>
+          <div class="exp-entry">${q.options[selectedIndex].explanation}</div>
+        `;
+      } else {
+        expBox.className = "explanation-box visible is-incorrect-box";
+        const selectedLetter = String.fromCharCode(65 + selectedIndex);
+        const correctLetter = String.fromCharCode(65 + q.correctIndex);
+        
+        expContent = `
+          <div class="status-badge incorrect">✕ Incorrect</div>
+          <div class="exp-entry"><strong>Option ${selectedLetter} (Your answer):</strong> ${q.options[selectedIndex].explanation}</div>
+          <div class="exp-entry" style="margin-top:0.5rem;"><strong>Option ${correctLetter} (Correct answer):</strong> ${q.options[q.correctIndex].explanation}</div>
+        `;
+      }
+
+      expBox.innerHTML = expContent;
+      updateScore();
+    }
+
+    function updateScore() {
+      let score = 0;
+      Object.keys(userAnswers).forEach(qIndex => {
+        if (userAnswers[qIndex] === quizData[parseInt(qIndex)].correctIndex) {
+          score++;
+        }
+      });
+      document.getElementById("score").textContent = score;
+    }
+
+    function resetQuiz() {
+      userAnswers = {};
+      renderQuiz();
+    }
+
+    document.addEventListener("DOMContentLoaded", renderQuiz);
+  </script>
+</body>
+</html>
